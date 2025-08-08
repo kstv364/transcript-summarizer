@@ -4,29 +4,40 @@ A scalable, production-ready transcript summarizer application built with Python
 
 ## Features
 
-- **Scalable Architecture**: Handles transcripts of any length using chunking and map-reduce strategies
-- **Ollama Integration**: Uses local Ollama models for cost-effective summarization
-- **Vector Storage**: ChromaDB for efficient document retrieval and similarity search
-- **Async Processing**: FastAPI-based REST API with async support
-- **Background Tasks**: Celery integration for long-running summarization tasks
-- **Containerized**: Docker and Kubernetes ready
-- **Production Ready**: Logging, monitoring, and health checks
-- **CI/CD**: GitHub Actions for automated testing and deployment
+- **🎯 Web Interface**: Modern Gradio-based web frontend for easy interaction
+- **📁 VTT Support**: Upload WebVTT subtitle files or paste transcript text directly
+- **⚡ Scalable Architecture**: Handles transcripts of any length using chunking and map-reduce strategies
+- **🦙 Ollama Integration**: Uses local Ollama models for cost-effective summarization
+- **🗃️ Vector Storage**: ChromaDB for efficient document retrieval and similarity search
+- **🚀 Async Processing**: FastAPI-based REST API with async support
+- **⚙️ Background Tasks**: Celery integration for long-running summarization tasks
+- **🐳 Containerized**: Docker and Kubernetes ready with frontend included
+- **📊 Production Ready**: Logging, monitoring, and health checks
+- **🔄 CI/CD**: GitHub Actions for automated testing and deployment to AWS/DigitalOcean
 
 ## Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   FastAPI       │    │   Celery        │    │   ChromaDB      │
-│   Web Server    │────│   Workers       │────│   Vector Store  │
+│   Gradio        │    │   FastAPI       │    │   Celery        │
+│   Frontend      │────│   Web Server    │────│   Workers       │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │                       │                       │
     ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-    │   Redis         │    │   Ollama        │    │   Prometheus    │
-    │   Task Queue    │    │   LLM API       │    │   Metrics       │
+    │   ChromaDB      │    │   Redis         │    │   Ollama        │
+    │   Vector Store  │    │   Task Queue    │    │   LLM API       │
     └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+### Components
+
+- **🎯 Gradio Frontend** (Port 7860): User-friendly web interface for uploading VTT files and managing summarizations
+- **🚀 FastAPI Server** (Port 8000): REST API with endpoints for transcript processing and status tracking
+- **⚙️ Celery Workers**: Background processing for AI-powered summarization tasks
+- **🗃️ ChromaDB**: Vector database for semantic search and document storage
+- **📊 Redis**: Task queue and caching layer
+- **🦙 Ollama**: Local LLM inference server
 
 ## Quick Start
 
@@ -85,37 +96,95 @@ We recommend using **uv** for 10-100x faster package operations:
    ```
 
 4. **Run the application**:
+   
+   **Option A: Full Stack with Frontend (Recommended)**
+   ```bash
+   # Start all services including Gradio frontend
+   docker-compose up -d
+   
+   # Access the web interface at: http://localhost:7860
+   # API documentation at: http://localhost:8000/docs
+   ```
+   
+   **Option B: API + Workers Only**
    ```bash
    # Start Celery worker
    celery -A transcript_summarizer.worker worker --loglevel=info
    
    # Start FastAPI server
    uvicorn transcript_summarizer.api:app --reload
+   
+   # Launch Gradio frontend (separate terminal)
+   transcript-summarizer frontend
    ```
 
 ### Docker Compose
 
+Start the complete application stack including the Gradio frontend:
+
 ```bash
+# Start all services
 docker-compose up -d
+
+# Access the application
+# Web Interface: http://localhost:7860
+# API Docs: http://localhost:8000/docs
+# Monitoring: http://localhost:5555 (Flower)
 ```
 
 ### Kubernetes
 
+Deploy to AWS EKS or DigitalOcean Kubernetes:
+
 ```bash
+# Configure your cluster context first
+# For AWS EKS:
+aws eks update-kubeconfig --region us-east-1 --name your-cluster-name
+
+# For DigitalOcean:
+doctl kubernetes cluster kubeconfig save your-cluster-name
+
+# Deploy the application
 kubectl apply -f k8s/
 ```
 
 ## Usage
 
+### Web Interface (Recommended)
+
+1. **Launch the Gradio Frontend**:
+   ```bash
+   # Using Docker Compose
+   docker-compose up frontend
+   
+   # Or using CLI
+   transcript-summarizer frontend
+   ```
+
+2. **Access the Web Interface**: Open http://localhost:7860 in your browser
+
+3. **Upload or Paste Content**:
+   - Upload a VTT subtitle file (.vtt)
+   - Upload a text file (.txt)
+   - Or paste transcript text directly
+
+4. **Choose Summary Type**:
+   - **Concise**: Brief overview with key points
+   - **Detailed**: Comprehensive summary with context
+   - **Bullet Points**: Structured list format
+
+5. **Get Results**: View your summary in real-time with processing status
+
 ### API Endpoints
 
 - `POST /summarize`: Submit a transcript for summarization
+- `POST /summarize/upload`: Upload VTT or text files for summarization
 - `GET /status/{task_id}`: Check summarization status
 - `GET /summary/{task_id}`: Retrieve completed summary
 - `GET /health`: Health check endpoint
 - `GET /metrics`: Prometheus metrics
 
-### Example
+### Example Usage
 
 ```python
 import requests

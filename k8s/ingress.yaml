@@ -1,0 +1,50 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: transcript-summarizer-ingress
+  namespace: transcript-summarizer
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - api.transcript-summarizer.kstv364.dev
+    - app.transcript-summarizer.kstv364.dev
+    secretName: transcript-summarizer-tls
+  rules:
+  # API endpoints
+  - host: api.transcript-summarizer.kstv364.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
+  # Frontend web app
+  - host: app.transcript-summarizer.kstv364.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 7860
+  # Optional: Monitoring
+  - host: monitor.transcript-summarizer.kstv364.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flower
+            port:
+              number: 5555

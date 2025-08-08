@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
@@ -20,9 +20,11 @@ from .models.schemas import (
     HealthResponse,
     ErrorResponse,
     TaskStatus,
+    SummaryType,
 )
 from .worker import app as celery_app
 from .storage.vector_store import get_vector_store
+from .utils.vtt_parser import VTTParser, is_valid_vtt
 
 logger = structlog.get_logger(__name__)
 
@@ -146,6 +148,139 @@ async def summarize_transcript(request: SummarizationRequest) -> SummarizationRe
     except Exception as e:
         logger.error("Failed to submit summarization task", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to submit summarization task")
+
+
+@app.post("/summarize/upload", response_model=SummarizationResponse)
+async def summarize_uploaded_file(
+    file: UploadFile = File(...),
+    summary_type: str = Form(default="concise"),
+    custom_prompt: str = Form(default="")
+) -> SummarizationResponse:
+    """
+    Upload a VTT or text file for summarization.
+    
+    Accepts VTT subtitle files or plain text files and extracts transcript
+    for summarization processing.
+    """
+    try:
+        # Validate file type
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+        
+        file_ext = file.filename.lower().split('.')[-1]
+        if file_ext not in ['vtt', 'txt', 'text']:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type. Please upload .vtt, .txt, or .text files"
+            )
+        
+        # Read file content
+        content = await file.read()
+        
+        # Check file size (10MB limit)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=413,
+                detail="File too large. Maximum size is 10MB"
+            )
+        
+        try:
+            # Decode content
+            text_content = content.decode('utf-8')
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=400,
+                detail="File must be UTF-8 encoded"
+            )
+        
+        # Extract transcript text
+        if file_ext == 'vtt':
+            try:
+                parser = VTTParser()
+                transcript_text = parser.parse_vtt_content(text_content)
+                
+                if not transcript_text.strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No text could be extracted from VTT file"
+                    )
+                
+                logger.info("Processed VTT file", 
+                           filename=file.filename,
+                           original_size=len(text_content),
+                           extracted_size=len(transcript_text))
+                           
+            except Exception as e:
+                logger.error("Failed to parse VTT file", error=str(e))
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to parse VTT file: {str(e)}"
+                )
+        else:
+            # Plain text file
+            transcript_text = text_content.strip()
+            
+        # Validate transcript
+        if not transcript_text:
+            raise HTTPException(
+                status_code=400,
+                detail="File appears to be empty or contains no text"
+            )
+        
+        if len(transcript_text) < 50:
+            raise HTTPException(
+                status_code=400,
+                detail="Transcript too short (minimum 50 characters)"
+            )
+        
+        # Validate summary type
+        try:
+            summary_type_enum = SummaryType(summary_type)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid summary type: {summary_type}"
+            )
+        
+        # Create summarization request
+        request_args = [transcript_text, summary_type_enum.value]
+        if custom_prompt.strip():
+            request_args.append(custom_prompt.strip())
+        
+        # Submit task to Celery
+        task = celery_app.send_task(
+            "summarize_transcript_task",
+            args=request_args,
+            queue="summarization"
+        )
+        
+        # Update metrics
+        summarization_count.labels(summary_type=summary_type).inc()
+        
+        logger.info("Submitted file-based summarization task", 
+                   task_id=task.id,
+                   filename=file.filename,
+                   file_type=file_ext,
+                   text_length=len(transcript_text))
+        
+        # Estimate completion time
+        estimated_time = max(30, len(transcript_text) // 1000)
+        
+        return SummarizationResponse(
+            task_id=task.id,
+            status=TaskStatus.PENDING,
+            message=f"File '{file.filename}' uploaded and queued for summarization",
+            estimated_completion_time=estimated_time
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to process uploaded file", error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to process uploaded file"
+        )
 
 
 @app.get("/status/{task_id}", response_model=TaskStatusResponse)

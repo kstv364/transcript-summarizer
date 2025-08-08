@@ -97,7 +97,29 @@ services:
       ollama:
         condition: service_healthy
     restart: unless-stopped
-    scale: 2
+    deploy:
+      replicas: 2
+
+  # Gradio Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "7860:7860"
+    environment:
+      - API_BASE_URL=http://api:8000
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
 
   # Flower for Celery monitoring (optional)
   flower:

@@ -5,10 +5,12 @@ import sys
 from typing import Optional
 import click
 import structlog
+import os
 
 from .config.settings import get_settings
 from .core.summarizer import create_summarizer
 from .models.schemas import SummaryType
+from .utils.vtt_parser import VTTParser, is_valid_vtt
 
 logger = structlog.get_logger(__name__)
 
@@ -35,13 +37,27 @@ def summarize(text_file, summary_type: str, output):
     """Summarize a transcript from a file."""
     async def _summarize():
         try:
-            # Read input text
-            text = text_file.read().strip()
-            if not text:
+            # Check if file is VTT format
+            content = text_file.read().strip()
+            text_file.seek(0)  # Reset file pointer
+            
+            if not content:
                 click.echo("Error: Input file is empty", err=True)
                 sys.exit(1)
             
-            click.echo(f"Processing {len(text)} characters...", err=True)
+            # Check if it's a VTT file
+            if text_file.name.endswith('.vtt') or is_valid_vtt(content):
+                click.echo("Detected VTT file, parsing...", err=True)
+                parser = VTTParser()
+                try:
+                    text = parser.parse_vtt_content(content)
+                    click.echo(f"Extracted {len(text)} characters from VTT", err=True)
+                except Exception as e:
+                    click.echo(f"Error parsing VTT file: {e}", err=True)
+                    sys.exit(1)
+            else:
+                text = content
+                click.echo(f"Processing {len(text)} characters...", err=True)
             
             # Create summarizer and process
             summarizer = await create_summarizer()
@@ -167,6 +183,41 @@ def init():
     click.echo(f"✓ Redis: {settings.redis_url}")
     
     click.echo("Initialization complete!")
+
+
+@cli.command()
+@click.option('--api-url', default='http://localhost:8000', 
+              help='API base URL (default: http://localhost:8000)')
+@click.option('--host', default='0.0.0.0', 
+              help='Host to bind to (default: 0.0.0.0)')
+@click.option('--port', default=7860, type=int,
+              help='Port to bind to (default: 7860)')
+@click.option('--share', is_flag=True,
+              help='Create a public link via Gradio')
+def frontend(api_url: str, host: str, port: int, share: bool):
+    """Launch the Gradio web frontend."""
+    try:
+        from .frontend.gradio_ui import launch_ui
+        
+        click.echo(f"🚀 Starting Gradio frontend...")
+        click.echo(f"   API URL: {api_url}")
+        click.echo(f"   Frontend URL: http://{host}:{port}")
+        if share:
+            click.echo(f"   Public sharing: Enabled")
+        
+        launch_ui(
+            api_base_url=api_url,
+            server_name=host,
+            server_port=port,
+            share=share
+        )
+        
+    except ImportError:
+        click.echo("❌ Gradio not installed. Install with: uv pip install gradio", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"❌ Error starting frontend: {e}", err=True)
+        sys.exit(1)
 
 
 def main():

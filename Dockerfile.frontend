@@ -1,0 +1,46 @@
+# Dockerfile for Gradio Frontend
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Copy requirements first for better caching
+COPY pyproject.toml ./
+
+# Install Python dependencies using uv (much faster)
+RUN uv pip install --system -e .
+
+# Copy application code
+COPY src/ ./src/
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose Gradio port
+EXPOSE 7860
+
+# Environment variables
+ENV GRADIO_SERVER_NAME=0.0.0.0
+ENV GRADIO_SERVER_PORT=7860
+ENV GRADIO_SHARE=false
+ENV API_BASE_URL=http://api:8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:7860/ || exit 1
+
+# Start the Gradio frontend
+CMD ["python", "-m", "transcript_summarizer.cli", "frontend", \
+     "--api-url", "${API_BASE_URL}", \
+     "--host", "0.0.0.0", \
+     "--port", "7860"]
