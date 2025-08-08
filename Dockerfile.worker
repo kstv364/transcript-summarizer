@@ -1,0 +1,30 @@
+# Dockerfile for Celery worker
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install dependencies
+COPY pyproject.toml ./
+RUN pip install -e .
+
+# Copy application code
+COPY src/ ./src/
+COPY README.md ./
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Default command for worker
+CMD ["celery", "-A", "transcript_summarizer.worker", "worker", "--loglevel=info", "--queues=summarization"]

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transcript-summarizer-worker
+  namespace: transcript-summarizer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: transcript-summarizer-worker
+  template:
+    metadata:
+      labels:
+        app: transcript-summarizer-worker
+    spec:
+      containers:
+      - name: worker
+        image: transcript-summarizer-worker:latest
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        envFrom:
+        - configMapRef:
+            name: transcript-summarizer-config
+        command:
+        - celery
+        - -A
+        - transcript_summarizer.worker
+        - worker
+        - --loglevel=info
+        - --queues=summarization
+        - --concurrency=2
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - sleep 30
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: transcript-summarizer-worker-hpa
+  namespace: transcript-summarizer
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: transcript-summarizer-worker
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85
