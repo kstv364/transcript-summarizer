@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: worker
-        image: transcript-summarizer-worker:latest
+        image: ghcr.io/kstv364/transcript-summarizer-worker:latest
         resources:
           requests:
             memory: "512Mi"

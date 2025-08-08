@@ -32,6 +32,10 @@ This document provides detailed instructions for deploying the Transcript Summar
 
 2. **Install dependencies**:
    ```bash
+   # Using uv (recommended - much faster)
+   uv pip install -e ".[dev]"
+   
+   # Or using pip
    pip install -e ".[dev]"
    ```
 
@@ -42,7 +46,7 @@ This document provides detailed instructions for deploying the Transcript Summar
    
    # Option 2: Install services locally
    # Redis: https://redis.io/download
-   # ChromaDB: pip install chromadb
+   # ChromaDB: uv pip install chromadb
    ```
 
 4. **Start Ollama and pull model**:
@@ -124,8 +128,8 @@ docker-compose -f docker-compose.prod.yml up -d
 1. **Update image references**:
    ```bash
    # In k8s/api.yaml and k8s/worker.yaml
-   sed -i 's|transcript-summarizer:latest|your-registry/transcript-summarizer:v1.0.0|g' k8s/api.yaml
-   sed -i 's|transcript-summarizer-worker:latest|your-registry/transcript-summarizer-worker:v1.0.0|g' k8s/worker.yaml
+   sed -i 's|transcript-summarizer:latest|kstv364/transcript-summarizer:v1.0.0|g' k8s/api.yaml
+   sed -i 's|transcript-summarizer-worker:latest|kstv364/transcript-summarizer-worker:v1.0.0|g' k8s/worker.yaml
    ```
 
 2. **Configure resource limits**:

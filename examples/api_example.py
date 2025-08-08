@@ -187,6 +187,7 @@ if __name__ == "__main__":
     print("="*50)
     print("Make sure the API server is running at http://localhost:8000")
     print("Start it with: uvicorn transcript_summarizer.api:app --reload")
+    print("(Install dependencies with: uv pip install -e \".[dev]\")")
     print()
     
     asyncio.run(main())

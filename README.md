@@ -30,10 +30,42 @@ A scalable, production-ready transcript summarizer application built with Python
 
 ## Quick Start
 
-### Local Development
+### Automated Setup (Recommended)
+
+For the fastest setup experience, use our automated scripts:
+
+**Windows (PowerShell):**
+```powershell
+# Quick setup with uv (super fast package manager)
+.\setup-uv.ps1
+
+# Or standard setup
+.\setup-windows.ps1
+```
+
+**macOS/Linux:**
+```bash
+# Using uv (recommended)
+./setup.sh --use-uv
+
+# Or standard setup
+./setup.sh
+```
+
+### Package Manager Choice
+
+We recommend using **uv** for 10-100x faster package operations:
+- 📚 **[Complete uv Guide](UV_GUIDE.md)** - Everything you need to know about uv
+- 🪟 **[Windows Setup Guide](WINDOWS_SETUP.md)** - Comprehensive Windows setup
+
+### Manual Setup
 
 1. **Install dependencies**:
    ```bash
+   # Using uv (recommended - much faster)
+   uv pip install -e ".[dev]"
+   
+   # Or using pip
    pip install -e ".[dev]"
    ```
 
@@ -119,7 +151,7 @@ Environment variables:
 
 ```bash
 # Install development dependencies
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 
 # Install pre-commit hooks
 pre-commit install

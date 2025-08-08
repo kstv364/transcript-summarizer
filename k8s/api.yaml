@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: transcript-summarizer:latest
+        image: ghcr.io/kstv364/transcript-summarizer:latest
         ports:
         - containerPort: 8000
         resources:

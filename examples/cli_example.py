@@ -75,5 +75,8 @@ if __name__ == "__main__":
     print("  ollama serve")
     print("  ollama pull llama3")
     print()
+    print("And install dependencies with uv:")
+    print("  uv pip install -e \".[dev]\"")
+    print()
     
     asyncio.run(main())

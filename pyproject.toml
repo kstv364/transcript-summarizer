@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "kstv364", email = "kstv364@example.com"},
 ]
 keywords = ["transcript", "summarization", "ollama", "langchain", "nlp"]
 classifiers = [
@@ -55,9 +55,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/transcript-summarizer"
-Repository = "https://github.com/yourusername/transcript-summarizer"
-Issues = "https://github.com/yourusername/transcript-summarizer/issues"
+Homepage = "https://github.com/kstv364/transcript-summarizer"
+Repository = "https://github.com/kstv364/transcript-summarizer"
+Issues = "https://github.com/kstv364/transcript-summarizer/issues"
 
 [project.scripts]
 transcript-summarizer = "transcript_summarizer.cli:main"
@@ -85,3 +85,14 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--cov=transcript_summarizer --cov-report=term-missing"
 asyncio_mode = "auto"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.9.0",
+    "flake8>=6.1.0",
+    "mypy>=1.6.0",
+    "pre-commit>=3.5.0",
+]
