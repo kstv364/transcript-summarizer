@@ -14,17 +14,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
-
 # Copy and install dependencies
 COPY pyproject.toml ./
-RUN uv pip install --system -e .
-
-# Copy application code
 COPY src/ ./src/
 COPY README.md ./
+
+# Install Python dependencies using pip (more reliable)
+RUN pip install --no-cache-dir -e .
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
